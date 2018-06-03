@@ -18,7 +18,7 @@
 #include <memoryAdapter.h>
 
 #define DEMO_FILE_NAME_LEN 256
-//#define USE_SVC
+#define USE_SVC
 //#define USE_VIDEO_SIGNAL
 //#define USE_ASPECT_RATIO
 //#define USE_SUPER_FRAME
@@ -188,25 +188,21 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
             logd(" get src_size: %dp ", encode_param->src_size);
             if(encode_param->src_size == 1080)
             {
-		printf(" 1080get src_size: %dp ", encode_param->src_size);
                 encode_param->src_width = 1920;
                 encode_param->src_height = 1080;
             }
             else if(encode_param->src_size == 720)
             {
-		printf(" 720get src_size: %dp ", encode_param->src_size);
                 encode_param->src_width = 1280;
                 encode_param->src_height = 720;
             }
             else if(encode_param->src_size == 480)
             {
-		printf(" 480get src_size: %dp ", encode_param->src_size);
                 encode_param->src_width = 640;
                 encode_param->src_height = 480;
             }
             else
             {
-		printf(" elseget src_size: %dp ", encode_param->src_size);
                 encode_param->src_width = 1280;
                 encode_param->src_height = 720;
                 logw("encoder demo only support the size 1080p,720p,480p, \
@@ -218,25 +214,21 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
             logd(" get dst_size: %dp ", encode_param->dst_size);
             if(encode_param->dst_size == 1080)
             {
-		printf(" 1080get dst_size: %dp ", encode_param->dst_size);
                 encode_param->dst_width = 1920;
                 encode_param->dst_height = 1080;
             }
             else if(encode_param->dst_size == 720)
             {
-		printf(" 720get dst_size: %dp ", encode_param->dst_size);
                 encode_param->dst_width = 1280;
                 encode_param->dst_height = 720;
             }
             else if(encode_param->dst_size == 480)
             {
-		printf(" 480get dst_size: %dp ", encode_param->dst_size);
                 encode_param->dst_width = 640;
                 encode_param->dst_height = 480;
             }
             else
             {
-		printf(" elseget dst_size: %dp ", encode_param->dst_size);
                 encode_param->dst_width = 1280;
                 encode_param->dst_height = 720;
                 logw("encoder demo only support the size 1080p,720p,480p,\
@@ -586,7 +578,7 @@ int main(int argc, char** argv)
 
 #ifdef USE_SVC
         // Add for  Temporal SVC and Skip_Frame
-        SVCSkip.nTemporalSVC =  T_LAYER_4;
+        SVCSkip.nTemporalSVC = T_LAYER_4;
         switch(SVCSkip.nTemporalSVC)
         {
             case T_LAYER_4:
@@ -676,12 +668,6 @@ int main(int argc, char** argv)
         }
     }
 
-#ifdef USE_SVC
-    // used for throw frame test with SVC
-    int TemporalLayer = -1;
-    char p9bytes[9] = {0};
-#endif
-
     unsigned int testNumber = 0;
 
     while(testNumber < encode_param.encode_frame_num)
@@ -746,39 +732,12 @@ int main(int argc, char** argv)
             goto out;
         }
 
-#ifdef USE_SVC
-        // used for throw frame test with SVC
-        memcpy(p9bytes, outputBuffer.pData0, 9);
-        TemporalLayer = SeekPrefixNAL(p9bytes);
-
-        switch(TemporalLayer)
-        {
-
-            case 3:
-            case 2:
-            case 1:
-                logv("just write the PrefixNAL\n");
-                fwrite(outputBuffer.pData0, 1, 9, out_file);
-                break;
-
-            default:
-                logv("\nTemporalLayer=%d,  testNumber=%d\n", TemporalLayer, testNumber);
-                fwrite(outputBuffer.pData0, 1, outputBuffer.nSize0, out_file);
-                //fwrite(outputBuffer.pData0+9, 1, outputBuffer.nSize0-9, out_file);
-                if(outputBuffer.nSize1)
-                {
-                    fwrite(outputBuffer.pData1, 1, outputBuffer.nSize1, out_file);
-                }
-                break;
-        }
-#else
         fwrite(outputBuffer.pData0, 1, outputBuffer.nSize0, out_file);
 
         if(outputBuffer.nSize1)
         {
             fwrite(outputBuffer.pData1, 1, outputBuffer.nSize1, out_file);
         }
-#endif
 
         if(encode_param.compare_flag)
         {
