@@ -539,8 +539,11 @@ int main(int argc, char** argv)
     //so use the func yu12_nv12() to config all the format.
     baseConfig.eInputFormat = VENC_PIXEL_YUV420SP;
 
-    bufferParam.nSizeY = baseConfig.nInputWidth*baseConfig.nInputHeight;
-    bufferParam.nSizeC = baseConfig.nInputWidth*baseConfig.nInputHeight/2;
+    int alignW = (baseConfig.nInputWidth + 15) & ~15;
+    int alignH = (baseConfig.nInputHeight + 15) & ~15;
+
+    bufferParam.nSizeY = alignW*alignH;
+    bufferParam.nSizeC = alignW*alignH/2;
     bufferParam.nBufferNum = 4;
 
     pVideoEnc = VideoEncCreate(encode_param.encode_format);
@@ -578,7 +581,7 @@ int main(int argc, char** argv)
 
 #ifdef USE_SVC
         // Add for  Temporal SVC and Skip_Frame
-        SVCSkip.nTemporalSVC = T_LAYER_4;
+        SVCSkip.nTemporalSVC = T_LAYER_3; //1080P support max T_LAYER_3 temporarily, fix it soon
         switch(SVCSkip.nTemporalSVC)
         {
             case T_LAYER_4:
@@ -800,7 +803,7 @@ int main(int argc, char** argv)
         logd("the compare result is ok\n");
     }
 
-    logd("the average encode time is %lldus...\n",time3/testNumber);
+    printf("the average encode time is %lldus, fps= %d ...\n",time3/testNumber, (1000000/(time3/testNumber)));
     if(pVideoEnc)
     {
         VideoEncDestroy(pVideoEnc);
