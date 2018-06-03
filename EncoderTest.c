@@ -170,7 +170,7 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
         case INPUT:
             memset(encode_param->intput_file, 0, sizeof(encode_param->intput_file));
             sscanf(value, "%255s", encode_param->intput_file);
-            logd(" get input file: %s ", encode_param->intput_file);
+            printf(" get input file: %s ", encode_param->intput_file);
             break;
         case ENCODE_FRAME_NUM:
             sscanf(value, "%u", &encode_param->encode_frame_num);
@@ -181,11 +181,11 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
         case OUTPUT:
             memset(encode_param->output_file, 0, sizeof(encode_param->output_file));
             sscanf(value, "%255s", encode_param->output_file);
-            logd(" get output file: %s ", encode_param->output_file);
+            printf(" get output file: %s ", encode_param->output_file);
             break;
         case SRC_SIZE:
             sscanf(value, "%u", &encode_param->src_size);
-            logd(" get src_size: %dp ", encode_param->src_size);
+            printf(" get src_size: %dp \n", encode_param->src_size);
             if(encode_param->src_size == 1080)
             {
                 encode_param->src_width = 1920;
@@ -205,13 +205,13 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
             {
                 encode_param->src_width = 1280;
                 encode_param->src_height = 720;
-                logw("encoder demo only support the size 1080p,720p,480p, \
+                printf("encoder demo only support the size 1080p,720p,480p, \
                  now use the default size 720p\n");
             }
             break;
         case DST_SIZE:
             sscanf(value, "%u", &encode_param->dst_size);
-            logd(" get dst_size: %dp ", encode_param->dst_size);
+            printf(" get dst_size: %dp \n", encode_param->dst_size);
             if(encode_param->dst_size == 1080)
             {
                 encode_param->dst_width = 1920;
@@ -231,7 +231,7 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
             {
                 encode_param->dst_width = 1280;
                 encode_param->dst_height = 720;
-                logw("encoder demo only support the size 1080p,720p,480p,\
+                printf("encoder demo only support the size 1080p,720p,480p,\
                  now use the default size 720p\n");
             }
             break;
@@ -239,11 +239,11 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
             sscanf(value, "%255s", encode_param->reference_file);
             encode_param->compare_flag = 1;
-            logd(" get reference file: %s ", encode_param->reference_file);
+            printf(" get reference file: %s ", encode_param->reference_file);
             break;
         case INVALID:
         default:
-            logd("unknowed argument :  %s", argument);
+            printf("unknowed argument :  %s", argument);
             break;
     }
 }
@@ -488,14 +488,14 @@ int main(int argc, char** argv)
     in_file = fopen(input_path, "r");
     if(in_file == NULL)
     {
-        loge("open in_file fail\n");
+        printf("open in_file fail\n");
         return -1;
     }
 
     out_file = fopen(output_path, "wb");
     if(out_file == NULL)
     {
-        loge("open out_file fail\n");
+        printf("open out_file fail\n");
         fclose(in_file);
         return -1;
     }
@@ -506,14 +506,14 @@ int main(int argc, char** argv)
         reference_file = fopen(reference_path, "r");
         if(reference_file == NULL)
         {
-            loge("open reference_file fail\n");
+            printf("open reference_file fail\n");
             goto out;
         }
 
         reference_buffer = (unsigned char*)malloc(1*1024*1024);
         if(reference_buffer == NULL)
         {
-            loge("malloc reference_buffer error\n");
+            printf("malloc reference_buffer error\n");
             goto out;
         }
     }
@@ -652,9 +652,9 @@ int main(int argc, char** argv)
         unsigned int head_num = 0;
         VideoEncGetParameter(pVideoEnc, VENC_IndexParamH264SPSPPS, &sps_pps_data);
         fwrite(sps_pps_data.pBuffer, 1, sps_pps_data.nLength, out_file);
-        logd("sps_pps_data.nLength: %d", sps_pps_data.nLength);
+        printf("sps_pps_data.nLength: %d   ", sps_pps_data.nLength);
         for(head_num=0; head_num<sps_pps_data.nLength; head_num++)
-            logd("the sps_pps :%02x\n", *(sps_pps_data.pBuffer+head_num));
+            printf("the sps_pps :%02x\n", *(sps_pps_data.pBuffer+head_num));
     }
 
     AllocInputBuffer(pVideoEnc, &bufferParam);
@@ -664,7 +664,7 @@ int main(int argc, char** argv)
         uv_tmp_buffer = (unsigned char*)malloc(baseConfig.nInputWidth*baseConfig.nInputHeight/2);
         if(uv_tmp_buffer == NULL)
         {
-            loge("malloc uv_tmp_buffer fail\n");
+            printf("malloc uv_tmp_buffer fail\n");
             fclose(out_file);
             fclose(in_file);
             return -1;
@@ -726,7 +726,7 @@ int main(int argc, char** argv)
 #ifdef USE_SUPER_FRAME
         if((sSuperFrameCfg.eSuperFrameMode==VENC_SUPERFRAME_DISCARD) && (result==-1))
         {
-            logd("VENC_SUPERFRAME_DISCARD: discard frame %d\n",testNumber);
+            printf("VENC_SUPERFRAME_DISCARD: discard frame %d\n",testNumber);
             continue;
         }
 #endif
@@ -747,7 +747,7 @@ int main(int argc, char** argv)
             result = fread(reference_buffer, 1, outputBuffer.nSize0, reference_file);
             if(result != outputBuffer.nSize0)
             {
-                loge("read reference_file error\n");
+                printf("read reference_file error\n");
                 goto out;
             }
 
@@ -755,7 +755,7 @@ int main(int argc, char** argv)
             {
                 if((outputBuffer.pData0)[i] != reference_buffer[i])
                 {
-                    loge("the %d frame's data0 %d byte is not same\n", testNumber, i);
+                    printf("the %d frame's data0 %d byte is not same\n", testNumber, i);
                     goto out;
                 }
             }
@@ -763,7 +763,7 @@ int main(int argc, char** argv)
             result = fread(reference_buffer, 1, outputBuffer.nSize1, reference_file);
             if(result != outputBuffer.nSize1)
             {
-                loge("read reference_file error\n");
+                printf("read reference_file error\n");
                 goto out;
             }
 
@@ -771,7 +771,7 @@ int main(int argc, char** argv)
             {
                 if((outputBuffer.pData1)[i] != reference_buffer[i])
                 {
-                    loge("the %d frame's data1 %d byte is not same\n", testNumber, i);
+                    printf("the %d frame's data1 %d byte is not same\n", testNumber, i);
                     goto out;
                 }
             }
@@ -800,7 +800,7 @@ int main(int argc, char** argv)
     if(encode_param.compare_flag)
     {
         encode_param.compare_result = 1;
-        logd("the compare result is ok\n");
+        printf("the compare result is ok\n");
     }
 
     printf("the average encode time is %lldus, fps= %d ...\n",time3/testNumber, (1000000/(time3/testNumber)));
@@ -832,19 +832,19 @@ out:
 
         if(encode_param.compare_result)
         {
-            logd("****************************************\n");
-            logd("the compare result is ok\n");
-            logd("the compare result is ok\n");
-            logd("the compare result is ok\n");
-            logd("****************************************\n");
+            printf("****************************************\n");
+            printf("the compare result is ok\n");
+            printf("the compare result is ok\n");
+            printf("the compare result is ok\n");
+            printf("****************************************\n");
         }
         else
         {
-            logd("****************************************\n");
-            logd("the compare result is fail\n");
-            logd("the compare result is fail\n");
-            logd("the compare result is fail\n");
-            logd("****************************************\n");
+            printf("****************************************\n");
+            printf("the compare result is fail\n");
+            printf("the compare result is fail\n");
+            printf("the compare result is fail\n");
+            printf("****************************************\n");
             return -1;
         }
     }
