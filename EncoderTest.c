@@ -70,6 +70,8 @@ typedef enum {
     SRC_SIZE,
     DST_SIZE,
     COMPARE_FILE,
+    BITRATE,
+    FRAMERATE,
     INVALID
 }ARGUMENT_T;
 
@@ -98,6 +100,10 @@ static const argument_t ArgumentMapping[] =
         "dst_size,can be 1080,720,480" },
     { "-c",  "--compare",  COMPARE_FILE,
         "compare file:reference file path" },
+    { "-b",  "--bitrate",  BITRATE,
+        "bitrate setting for example 1000000(1M)" },
+    { "-a",  "--framerate",  FRAMERATE,
+        "framerate setting for example 30/60" },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -170,31 +176,31 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
         case INPUT:
             memset(encode_param->intput_file, 0, sizeof(encode_param->intput_file));
             sscanf(value, "%255s", encode_param->intput_file);
-            printf(" get input file: %s ", encode_param->intput_file);
+            printf(" get input file: %s \n", encode_param->intput_file);
             break;
         case ENCODE_FRAME_NUM:
             sscanf(value, "%u", &encode_param->encode_frame_num);
             break;
-        case ENCODE_FORMAT:
-            sscanf(value, "%u", &encode_param->encode_format);
-            break;
-        case OUTPUT:
-            memset(encode_param->output_file, 0, sizeof(encode_param->output_file));
-            sscanf(value, "%255s", encode_param->output_file);
-            printf(" get output file: %s ", encode_param->output_file);
-            break;
-        case SRC_SIZE:
-            sscanf(value, "%u", &encode_param->src_size);
-            printf(" get src_size: %dp \n", encode_param->src_size);
-            if(encode_param->src_size == 1080)
-            {
-                encode_param->src_width = 1920;
-                encode_param->src_height = 1080;
-            }
-            else if(encode_param->src_size == 720)
-            {
-                encode_param->src_width = 1280;
-                encode_param->src_height = 720;
+	case ENCODE_FORMAT:
+	    sscanf(value, "%u", &encode_param->encode_format);
+	    break;
+	case OUTPUT:
+	    memset(encode_param->output_file, 0, sizeof(encode_param->output_file));
+	    sscanf(value, "%255s", encode_param->output_file);
+	    printf(" get output file: %s \n", encode_param->output_file);
+	    break;
+	case SRC_SIZE:
+	    sscanf(value, "%u", &encode_param->src_size);
+	    printf(" get src_size: %dp \n", encode_param->src_size);
+	    if(encode_param->src_size == 1080)
+	    {
+		    encode_param->src_width = 1920;
+		    encode_param->src_height = 1080;
+	    }
+	    else if(encode_param->src_size == 720)
+	    {
+		    encode_param->src_width = 1280;
+		    encode_param->src_height = 720;
             }
             else if(encode_param->src_size == 480)
             {
@@ -235,15 +241,24 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
                  now use the default size 720p\n");
             }
             break;
-            case COMPARE_FILE:
+        case COMPARE_FILE:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
             sscanf(value, "%255s", encode_param->reference_file);
             encode_param->compare_flag = 1;
-            printf(" get reference file: %s ", encode_param->reference_file);
+            printf(" get reference file: %s \n", encode_param->reference_file);
             break;
+	case BITRATE:
+	    sscanf(value, "%ld", encode_param->bit_rate);
+	    printf(" set bitrate to: %ld \n", encode_param->bit_rate);
+	    break;
+	case FRAMERATE:
+	    sscanf(value, "%u", encode_param->frame_rate);
+	    printf(" set framerate to: %d \n", encode_param->frame_rate);
+	    break;
+
         case INVALID:
         default:
-            printf("unknowed argument :  %s", argument);
+            printf("unknowed argument :  %s \n", argument);
             break;
     }
 }
@@ -652,9 +667,10 @@ int main(int argc, char** argv)
         unsigned int head_num = 0;
         VideoEncGetParameter(pVideoEnc, VENC_IndexParamH264SPSPPS, &sps_pps_data);
         fwrite(sps_pps_data.pBuffer, 1, sps_pps_data.nLength, out_file);
-        printf("sps_pps_data.nLength: %d   ", sps_pps_data.nLength);
+        printf(" sps_pps_data.nLength: %d, sps psp data   ", sps_pps_data.nLength);
         for(head_num=0; head_num<sps_pps_data.nLength; head_num++)
-            printf("the sps_pps :%02x\n", *(sps_pps_data.pBuffer+head_num));
+            printf("0x%02x  ", *(sps_pps_data.pBuffer+head_num));
+	printf("\n");
     }
 
     AllocInputBuffer(pVideoEnc, &bufferParam);
@@ -716,8 +732,8 @@ int main(int argc, char** argv)
         time1 = GetNowUs();
         VideoEncodeOneFrame(pVideoEnc);
         time2 = GetNowUs();
-        logv("encode frame %d use time is %lldus..\n",testNumber,(time2-time1));
         time3 += time2-time1;
+        printf(" encode frame %d use time is %lldus..\r",testNumber,(time2-time1));
 
         AlreadyUsedInputBuffer(pVideoEnc,&inputBuffer);
         ReturnOneAllocInputBuffer(pVideoEnc, &inputBuffer);
@@ -726,7 +742,7 @@ int main(int argc, char** argv)
 #ifdef USE_SUPER_FRAME
         if((sSuperFrameCfg.eSuperFrameMode==VENC_SUPERFRAME_DISCARD) && (result==-1))
         {
-            printf("VENC_SUPERFRAME_DISCARD: discard frame %d\n",testNumber);
+            printf(" VENC_SUPERFRAME_DISCARD: discard frame %d\n",testNumber);
             continue;
         }
 #endif
@@ -803,13 +819,13 @@ int main(int argc, char** argv)
         printf("the compare result is ok\n");
     }
 
-    printf("the average encode time is %lldus, fps= %d ...\n",time3/testNumber, (1000000/(time3/testNumber)));
+    printf("\n the average encode time is %lldus, fps= %d ...\n",time3/testNumber, (1000000/(time3/testNumber)));
     if(pVideoEnc)
     {
         VideoEncDestroy(pVideoEnc);
     }
     pVideoEnc = NULL;
-    printf("output file is saved:%s\n",encode_param.output_file);
+    printf(" output file is saved:%s\n",encode_param.output_file);
 
 out:
     if(out_file)
