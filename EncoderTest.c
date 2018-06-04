@@ -51,6 +51,7 @@ typedef struct {
 
     unsigned int src_size;
     unsigned int dst_size;
+    unsigned int output_len;
 
     unsigned int src_width;
     unsigned int src_height;
@@ -661,7 +662,7 @@ int main(int argc, char** argv)
     {
         unsigned int head_num = 0;
         VideoEncGetParameter(pVideoEnc, VENC_IndexParamH264SPSPPS, &sps_pps_data);
-        fwrite(sps_pps_data.pBuffer, 1, sps_pps_data.nLength, out_file);
+        encode_param.output_len += fwrite(sps_pps_data.pBuffer, 1, sps_pps_data.nLength, out_file);
         printf(" sps_pps_data.nLength: %d, sps psp data   ", sps_pps_data.nLength);
         for(head_num=0; head_num<sps_pps_data.nLength; head_num++)
             printf("0x%02x  ", *(sps_pps_data.pBuffer+head_num));
@@ -746,11 +747,11 @@ int main(int argc, char** argv)
             goto out;
         }
 
-        fwrite(outputBuffer.pData0, 1, outputBuffer.nSize0, out_file);
+        encode_param.output_len += fwrite(outputBuffer.pData0, 1, outputBuffer.nSize0, out_file);
 
         if(outputBuffer.nSize1)
         {
-            fwrite(outputBuffer.pData1, 1, outputBuffer.nSize1, out_file);
+            encode_param.output_len += fwrite(outputBuffer.pData1, 1, outputBuffer.nSize1, out_file);
         }
 
         if(encode_param.compare_flag)
@@ -820,7 +821,7 @@ int main(int argc, char** argv)
         VideoEncDestroy(pVideoEnc);
     }
     pVideoEnc = NULL;
-    printf(" output file is saved:%s\n",encode_param.output_file);
+    printf(" output file size is %d, encode_time= %lldus, expect_bitrate= %dbps, real_bitrate= %fbps\n",encode_param.output_len, time3,encode_param.bit_rate, (encode_param.output_len*1000000)/time3);
 
 out:
     if(out_file)
