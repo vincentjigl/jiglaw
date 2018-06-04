@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 #include "vencoder.h"
 #include <sys/time.h>
 #include <time.h>
@@ -90,7 +91,7 @@ static const argument_t ArgumentMapping[] =
         "Input file path" },
     { "-n",  "--encode_frame_num",   ENCODE_FRAME_NUM,
         "After encoder n frames, encoder stop" },
-    { "-f",  "--encode_format",  ENCODE_FORMAT,
+    { "-c",  "--encode_format",  ENCODE_FORMAT,
         "0:h264 encoder, 1:jpeg_encoder" },
     { "-o",  "--output",  OUTPUT,
         "output file path" },
@@ -98,11 +99,11 @@ static const argument_t ArgumentMapping[] =
         "src_size,can be 1080,720,480" },
     { "-d",  "--dstsize",  DST_SIZE,
         "dst_size,can be 1080,720,480" },
-    { "-c",  "--compare",  COMPARE_FILE,
+    { "--",  "--compare",  COMPARE_FILE,
         "compare file:reference file path" },
     { "-b",  "--bitrate",  BITRATE,
         "bitrate setting for example 1000000(1M)" },
-    { "-a",  "--framerate",  FRAMERATE,
+    { "-f",  "--framerate",  FRAMERATE,
         "framerate setting for example 30/60" },
 };
 
@@ -131,22 +132,7 @@ int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
     return 0;
 }
 
-ARGUMENT_T GetArgument(char *name)
-{
-    int i = 0;
-    int num = sizeof(ArgumentMapping) / sizeof(argument_t);
-    while(i < num)
-    {
-        if((0 == strcmp(ArgumentMapping[i].Name, name)) ||
-            ((0 == strcmp(ArgumentMapping[i].Short, name)) &&
-             (0 != strcmp(ArgumentMapping[i].Short, "--"))))
-        {
-            return ArgumentMapping[i].argument;
-        }
-        i++;
-    }
-    return INVALID;
-}
+
 
 static void PrintDemoUsage(void)
 {
@@ -162,36 +148,40 @@ static void PrintDemoUsage(void)
     }
 }
 
-void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
+void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
 {
-    ARGUMENT_T arg;
+    const struct option long_opts[] = {
+        {"help", no_argument, NULL, 0 },
+        {"bitrate", required_argument, NULL, 1 },
+        {"compare", required_argument, NULL, 2 },
+        {"hh", no_argument, NULL, 3},
+        {NULL, no_argument, NULL, 0 }
+    };
 
-    arg = GetArgument(argument);
+    int long_index, i ;
+    int c;
+    while (1){
+	c = getopt_long_only(argc, argv, "b:s:i:d:c:n:f:o:", long_opts, &long_index);
 
-    switch(arg)
-    {
-        case HELP:
+	if (c == -1)
+		break;
+
+        switch (c) {
+        case 69:
+        case 0:
             PrintDemoUsage();
-            exit(-1);
-        case INPUT:
-            memset(encode_param->intput_file, 0, sizeof(encode_param->intput_file));
-            sscanf(value, "%255s", encode_param->intput_file);
-            printf(" get input file: %s \n", encode_param->intput_file);
+            //PrintHelpInfo();
+            exit(0);
+        case  'b':
+            encode_param->bit_rate= atoi(optarg);
             break;
-        case ENCODE_FRAME_NUM:
-            sscanf(value, "%u", &encode_param->encode_frame_num);
+        case  2:
+            memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
+            strncpy(encode_param->reference_file, optarg, strlen(optarg));
+            encode_param->compare_flag = 1;
             break;
-	case ENCODE_FORMAT:
-	    sscanf(value, "%u", &encode_param->encode_format);
-	    break;
-	case OUTPUT:
-	    memset(encode_param->output_file, 0, sizeof(encode_param->output_file));
-	    sscanf(value, "%255s", encode_param->output_file);
-	    printf(" get output file: %s \n", encode_param->output_file);
-	    break;
-	case SRC_SIZE:
-	    sscanf(value, "%u", &encode_param->src_size);
-	    printf(" get src_size: %dp \n", encode_param->src_size);
+        case 's':
+            encode_param->src_size= atoi(optarg);
 	    if(encode_param->src_size == 1080)
 	    {
 		    encode_param->src_width = 1920;
@@ -214,10 +204,10 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
                 printf("encoder demo only support the size 1080p,720p,480p, \
                  now use the default size 720p\n");
             }
+
             break;
-        case DST_SIZE:
-            sscanf(value, "%u", &encode_param->dst_size);
-            printf(" get dst_size: %dp \n", encode_param->dst_size);
+        case 'd':
+            encode_param->dst_size= atoi(optarg);
             if(encode_param->dst_size == 1080)
             {
                 encode_param->dst_width = 1920;
@@ -240,26 +230,29 @@ void ParseArgument(encode_param_t *encode_param, char *argument, char *value)
                 printf("encoder demo only support the size 1080p,720p,480p,\
                  now use the default size 720p\n");
             }
-            break;
-        case COMPARE_FILE:
-            memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
-            sscanf(value, "%255s", encode_param->reference_file);
-            encode_param->compare_flag = 1;
-            printf(" get reference file: %s \n", encode_param->reference_file);
-            break;
-	case BITRATE:
-	    sscanf(value, "%ld", encode_param->bit_rate);
-	    printf(" set bitrate to: %ld \n", encode_param->bit_rate);
-	    break;
-	case FRAMERATE:
-	    sscanf(value, "%u", encode_param->frame_rate);
-	    printf(" set framerate to: %d \n", encode_param->frame_rate);
-	    break;
 
-        case INVALID:
-        default:
-            printf("unknowed argument :  %s \n", argument);
             break;
+        case 'c':
+            encode_param->encode_format = atoi(optarg);
+            break;
+        case 'n':
+            encode_param->encode_frame_num= atoi(optarg);
+            break;
+        case 'f':
+            encode_param->frame_rate = atoi(optarg);
+            break;
+        case 'i':
+            memset(encode_param->intput_file, 0 , sizeof(encode_param->intput_file));
+            strncpy(encode_param->intput_file, optarg, strlen(optarg));
+            break;
+        case 'o':
+            memset(encode_param->output_file, 0 , sizeof(encode_param->output_file));
+            strncpy(encode_param->output_file, optarg, strlen(optarg));
+            break;
+
+	default:
+	    break;
+	}
     }
 }
 
@@ -412,7 +405,7 @@ int main(int argc, char** argv)
     encode_param.dst_width = 1280;
     encode_param.dst_height = 720;
 
-    encode_param.bit_rate = 6*1024*1024;
+    encode_param.bit_rate = 2*1024*1024;
     encode_param.frame_rate = 30;
     encode_param.maxKeyFrame = 30;
 
@@ -424,19 +417,15 @@ int main(int argc, char** argv)
     strcpy((char*)encode_param.reference_file,     "/mnt/bsp_ve_test/reference_data/reference.jpg");
 
     //parse the config paramter
-    if(argc >= 2)
-    {
-        for(i = 1; i < (int)argc; i += 2)
-        {
-            ParseArgument(&encode_param, argv[i], argv[i + 1]);
-        }
-    }
-    else
-    {
-        printf(" we need more arguments ");
-        PrintDemoUsage();
-        return 0;
-    }
+    ParseArgument(&encode_param, argc, argv);
+    printf(" input file: %s \n", encode_param.intput_file);
+    printf(" output file: %s \n", encode_param.output_file);
+    printf(" get dst_size: %d \n", encode_param.dst_size);
+    printf(" get src_size: %d \n", encode_param.src_size);
+    printf(" codec format : %d \n", encode_param.encode_format);
+    printf(" bitrate : %d \n", encode_param.bit_rate);
+    printf(" framerate: %d \n", encode_param.frame_rate);
+    printf(" get reference file: %s \n", encode_param.reference_file);
 
     // roi
     VencROIConfig sRoiConfig[4];
@@ -495,6 +484,7 @@ int main(int argc, char** argv)
     h264Param.sQPRange.nMinqp = 10;
     h264Param.sQPRange.nMaxqp = 40;
 
+	printf(" init jpeg\n");
     InitJpegExif(&exifinfo);
 
     input_path = encode_param.intput_file;
@@ -514,6 +504,7 @@ int main(int argc, char** argv)
         fclose(in_file);
         return -1;
     }
+	printf(" open input and output file \n");
 
     if(encode_param.compare_flag)
     {
@@ -553,6 +544,7 @@ int main(int argc, char** argv)
     //but the old ic only support the yuv420sp,
     //so use the func yu12_nv12() to config all the format.
     baseConfig.eInputFormat = VENC_PIXEL_YUV420SP;
+	printf(" base config \n");
 
     int alignW = (baseConfig.nInputWidth + 15) & ~15;
     int alignH = (baseConfig.nInputHeight + 15) & ~15;
@@ -562,6 +554,7 @@ int main(int argc, char** argv)
     bufferParam.nBufferNum = 4;
 
     pVideoEnc = VideoEncCreate(encode_param.encode_format);
+    printf(" create video encoder \n" );
 
     if(encode_param.encode_format == VENC_CODEC_JPEG)
     {
@@ -593,6 +586,7 @@ int main(int argc, char** argv)
         int value;
 
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264Param, &h264Param);
+	printf(" set param h264 common, \n" );
 
 #ifdef USE_SVC
         // Add for  Temporal SVC and Skip_Frame
@@ -614,6 +608,7 @@ int main(int argc, char** argv)
         }
 
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264SVCSkip, &SVCSkip);
+	printf("set parm svc, temporal layer %d \n", SVCSkip.nTemporalSVC = T_LAYER_3);
 #endif
 
         value = 0;
@@ -819,7 +814,7 @@ int main(int argc, char** argv)
         printf("the compare result is ok\n");
     }
 
-    printf("\n the average encode time is %lldus, fps= %d ...\n",time3/testNumber, (1000000/(time3/testNumber)));
+    printf("\n the average encode time is %lldus, fps= %lld ...\n",time3/testNumber, (1000000/(time3/testNumber)));
     if(pVideoEnc)
     {
         VideoEncDestroy(pVideoEnc);

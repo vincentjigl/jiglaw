@@ -4,7 +4,7 @@ include $(CLEAR_VARS)
 TARGET_PATH=$(TOP)/frameworks/av/media/libcedarx/demo/demoVencoder
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_SRC_FILES:= EncoderTest.c \
+LOCAL_SRC_FILES:= EncoderTest.c 
 
 LOCAL_C_INCLUDES := \
 	$(TARGET_PATH) \
