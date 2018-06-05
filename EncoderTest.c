@@ -184,10 +184,10 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         case  'b':
             encode_param->bit_rate= atoi(optarg);
             break;
-        case  '3':
+        case  3:
             encode_param->qpmin= atoi(optarg);
             break;
-        case  '4':
+        case  4:
             encode_param->qpmax= atoi(optarg);
             break;
         case  2:
