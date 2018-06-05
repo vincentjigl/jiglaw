@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <getopt.h>
 #include "vencoder.h"
 #include <sys/time.h>
@@ -19,7 +20,6 @@
 #include <memoryAdapter.h>
 
 #define DEMO_FILE_NAME_LEN 256
-#define USE_SVC
 //#define USE_VIDEO_SIGNAL
 //#define USE_ASPECT_RATIO
 //#define USE_SUPER_FRAME
@@ -58,6 +58,7 @@ typedef struct {
     unsigned int dst_width;
     unsigned int dst_height;
 
+    bool bSvc;
     int qpmin;
     int qpmax;
     int bit_rate;
@@ -112,6 +113,8 @@ static const argument_t ArgumentMapping[] =
         "bitrate setting for example 1000000(1M)" },
     { "-f",  "--framerate",  12,
         "framerate setting for example 30/60" },
+    { "--",  "-avc",  12,
+        "set as avc encoding " },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -163,6 +166,7 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"compare", required_argument, NULL, 2 },
         {"qpmin", required_argument, NULL, 3 },
         {"qpmax", required_argument, NULL, 4 },
+        {"avc", no_argument, NULL, 5 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -189,6 +193,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  4:
             encode_param->qpmax= atoi(optarg);
+            break;
+        case  5:
+            encode_param->bSvc = false;
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -388,9 +395,7 @@ int main(int argc, char** argv)
 #ifdef USE_SUPER_FRAME
     VencSuperFrameConfig     sSuperFrameCfg;
 #endif
-#ifdef USE_SVC
     VencH264SVCSkip         SVCSkip; // set SVC and skip_frame
-#endif
 #ifdef USE_ASPECT_RATIO
     VencH264AspectRatio        sAspectRatio;
 #endif
@@ -425,6 +430,7 @@ int main(int argc, char** argv)
     encode_param.maxKeyFrame = 30;
     encode_param.qpmin = 10;
     encode_param.qpmax = 50;
+    encode_param.bSvc = true;
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
@@ -437,13 +443,10 @@ int main(int argc, char** argv)
     ParseArgument(&encode_param, argc, argv);
     printf(" input file: %s \n", encode_param.intput_file);
     printf(" output file: %s \n", encode_param.output_file);
-    printf(" get dst_size: %d \n", encode_param.dst_size);
-    printf(" get src_size: %d \n", encode_param.src_size);
+    printf(" dst_size=%d, src_size=%d, bitrate=%d, qpmin=%d, qpmax=%d, framerate=%d\n", \
+           encode_param.dst_size, encode_param.src_size,  encode_param.bit_rate, \
+           encode_param.qpmin, encode_param.qpmax, encode_param.frame_rate);
     printf(" codec format : %d \n", encode_param.encode_format);
-    printf(" bitrate : %d \n", encode_param.bit_rate);
-    printf(" qpmin : %d \n", encode_param.qpmin);
-    printf(" qpmax : %d \n", encode_param.qpmax);
-    printf(" framerate: %d \n", encode_param.frame_rate);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
     // roi
@@ -523,7 +526,6 @@ int main(int argc, char** argv)
         fclose(in_file);
         return -1;
     }
-	printf(" open input and output file \n");
 
     if(encode_param.compare_flag)
     {
@@ -607,7 +609,7 @@ int main(int argc, char** argv)
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264Param, &h264Param);
 	printf(" set param h264 common, \n" );
 
-#ifdef USE_SVC
+    if(encode_param.bSvc){
         // Add for  Temporal SVC and Skip_Frame
         SVCSkip.nTemporalSVC = T_LAYER_3; //1080P support max T_LAYER_3 temporarily, fix it soon
         switch(SVCSkip.nTemporalSVC)
@@ -627,8 +629,8 @@ int main(int argc, char** argv)
         }
 
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264SVCSkip, &SVCSkip);
-	printf("set parm svc, temporal layer %d \n", SVCSkip.nTemporalSVC = T_LAYER_3);
-#endif
+	    printf("set parm svc, temporal layer %d \n", SVCSkip.nTemporalSVC = T_LAYER_3);
+    }
 
         value = 0;
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamIfilter, &value);
