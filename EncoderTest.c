@@ -58,6 +58,8 @@ typedef struct {
     unsigned int dst_width;
     unsigned int dst_height;
 
+    int qpmin;
+    int qpmax;
     int bit_rate;
     int frame_rate;
     int maxKeyFrame;
@@ -80,31 +82,35 @@ typedef enum {
 typedef struct {
     char Short[8];
     char Name[128];
-    ARGUMENT_T argument;
+    int argument;
     char Description[512];
 }argument_t;
 
 static const argument_t ArgumentMapping[] =
 {
-    { "-h",  "--help",    HELP,
+    { "-h",  "--help",    1,
         "Print this help" },
-    { "-i",  "--input",   INPUT,
+    { "-i",  "--input",   2,
         "Input file path" },
-    { "-n",  "--encode_frame_num",   ENCODE_FRAME_NUM,
+    { "-n",  "--encode_frame_num",   3,
         "After encoder n frames, encoder stop" },
-    { "-c",  "--encode_format",  ENCODE_FORMAT,
+    { "-c",  "--encode_format",  4,
         "0:h264 encoder, 1:jpeg_encoder" },
-    { "-o",  "--output",  OUTPUT,
+    { "-o",  "--output", 5,
         "output file path" },
-    { "-s",  "--srcsize",  SRC_SIZE,
+    { "-s",  "--srcsize",  6,
         "src_size,can be 1080,720,480" },
-    { "-d",  "--dstsize",  DST_SIZE,
+    { "-d",  "--dstsize",  7 ,
         "dst_size,can be 1080,720,480" },
-    { "--",  "--compare",  COMPARE_FILE,
+    { "--",  "--compare",  8,
         "compare file:reference file path" },
-    { "-b",  "--bitrate",  BITRATE,
+    { "--",  "-qpmin",  9,
+        "set min qp: " },
+    { "--",  "-qpmax",  10,
+        "set max qp: " },
+    { "-b",  "--bitrate",  11,
         "bitrate setting for example 1000000(1M)" },
-    { "-f",  "--framerate",  FRAMERATE,
+    { "-f",  "--framerate",  12,
         "framerate setting for example 30/60" },
 };
 
@@ -155,7 +161,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"help", no_argument, NULL, 0 },
         {"bitrate", required_argument, NULL, 1 },
         {"compare", required_argument, NULL, 2 },
-        {"hh", no_argument, NULL, 3},
+        {"qpmin", required_argument, NULL, 3 },
+        {"qpmax", required_argument, NULL, 4 },
+        {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
 
@@ -175,6 +183,12 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             exit(0);
         case  'b':
             encode_param->bit_rate= atoi(optarg);
+            break;
+        case  '3':
+            encode_param->qpmin= atoi(optarg);
+            break;
+        case  '4':
+            encode_param->qpmax= atoi(optarg);
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -409,6 +423,8 @@ int main(int argc, char** argv)
     encode_param.bit_rate = 2*1024*1024;
     encode_param.frame_rate = 30;
     encode_param.maxKeyFrame = 30;
+    encode_param.qpmin = 10;
+    encode_param.qpmax = 50;
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
@@ -425,6 +441,8 @@ int main(int argc, char** argv)
     printf(" get src_size: %d \n", encode_param.src_size);
     printf(" codec format : %d \n", encode_param.encode_format);
     printf(" bitrate : %d \n", encode_param.bit_rate);
+    printf(" qpmin : %d \n", encode_param.qpmin);
+    printf(" qpmax : %d \n", encode_param.qpmax);
     printf(" framerate: %d \n", encode_param.frame_rate);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
@@ -480,10 +498,10 @@ int main(int argc, char** argv)
     //h264Param.nCodingMode = VENC_FIELD_CODING;
 
     h264Param.nMaxKeyInterval = encode_param.maxKeyFrame;
-    h264Param.sProfileLevel.nProfile = VENC_H264ProfileMain;
-    h264Param.sProfileLevel.nLevel = VENC_H264Level31;
-    h264Param.sQPRange.nMinqp = 10;
-    h264Param.sQPRange.nMaxqp = 40;
+    h264Param.sProfileLevel.nProfile = VENC_H264ProfileHigh;
+    h264Param.sProfileLevel.nLevel = VENC_H264Level51;
+    h264Param.sQPRange.nMinqp = encode_param.qpmin;
+    h264Param.sQPRange.nMaxqp = encode_param.qpmax;
 
 	printf(" init jpeg\n");
     InitJpegExif(&exifinfo);
