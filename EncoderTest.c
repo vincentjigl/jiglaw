@@ -60,6 +60,9 @@ typedef struct {
 
     bool bSvc;
     bool bSar;
+    bool bfixQp;
+    int fixIQp;
+    int fixPQp;
     int qpmin;
     int qpmax;
     int bit_rate;
@@ -118,6 +121,12 @@ static const argument_t ArgumentMapping[] =
         "enable avc encoding " },
     { "--",  "-sar",  13,
         "enable sample aspect ratio" },
+    { "--",  "-fixqp",  14,
+        "enable fixqp, must set the iqp and pqp, -iqp xxx, -pqp xxx" },
+    { "--",  "-iqp",  15,
+        "set iqp " },
+    { "--",  "-pqp",  15,
+        "set pqp " },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -171,6 +180,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"qpmax", required_argument, NULL, 4 },
         {"avc", no_argument, NULL, 5 },
         {"sar", no_argument, NULL, 6 },
+        {"fixqp", no_argument, NULL, 7 },
+        {"iqp", required_argument, NULL, 8 },
+        {"pqp", required_argument, NULL, 9 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -203,6 +215,15 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  6:
             encode_param->bSar = true;
+            break;
+        case  7:
+            encode_param->bfixQp = true;
+            break;
+        case  8:
+            encode_param->fixIQp = atoi(optarg);
+            break;
+        case  9:
+            encode_param->fixPQp = atoi(optarg);
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -445,6 +466,11 @@ int main(int argc, char** argv)
     strcpy((char*)encode_param.output_file,        "/data/camera/720p.264");
     strcpy((char*)encode_param.reference_file,     "/mnt/bsp_ve_test/reference_data/reference.jpg");
 
+    //fix qp mode
+    fixQP.bEnable = 0;
+    fixQP.nIQp = 20;
+    fixQP.nPQp = 30;
+
     //parse the config paramter
     ParseArgument(&encode_param, argc, argv);
     printf(" input file: %s \n", encode_param.intput_file);
@@ -452,6 +478,8 @@ int main(int argc, char** argv)
     printf(" dst_size=%d, src_size=%d, bitrate=%d, qpmin=%d, qpmax=%d, framerate=%d\n", \
            encode_param.dst_size, encode_param.src_size,  encode_param.bit_rate, \
            encode_param.qpmin, encode_param.qpmax, encode_param.frame_rate);
+    if(encode_param.bfixQp)
+        printf(" fix qp enable, IQp=%d, PQp=%d  \n", encode_param.fixIQp,encode_param.fixPQp);
     printf(" codec format : %d \n", encode_param.encode_format);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
@@ -495,9 +523,9 @@ int main(int argc, char** argv)
     sIntraRefresh.nBlockNumber = 10;
 
     //fix qp mode
-    fixQP.bEnable = 1;
-    fixQP.nIQp = 20;
-    fixQP.nPQp = 30;
+    fixQP.bEnable = encode_param.bfixQp;
+    fixQP.nIQp = encode_param.fixIQp;
+    fixQP.nPQp = encode_param.fixPQp;
 
     //* h264 param
     h264Param.bEntropyCodingCABAC = 1;
@@ -644,7 +672,8 @@ int main(int argc, char** argv)
         value = 0; //degree
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamRotation, &value);
 
-        //VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264FixQP, &fixQP);
+        if(encode_param.bfixQp)
+            VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264FixQP, &fixQP);
 
         //VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264CyclicIntraRefresh, &sIntraRefresh);
 
