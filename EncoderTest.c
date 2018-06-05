@@ -59,6 +59,7 @@ typedef struct {
     unsigned int dst_height;
 
     bool bSvc;
+    bool bSar;
     int qpmin;
     int qpmax;
     int bit_rate;
@@ -114,7 +115,9 @@ static const argument_t ArgumentMapping[] =
     { "-f",  "--framerate",  12,
         "framerate setting for example 30/60" },
     { "--",  "-avc",  12,
-        "set as avc encoding " },
+        "enable avc encoding " },
+    { "--",  "-sar",  13,
+        "enable sample aspect ratio" },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -167,6 +170,7 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"qpmin", required_argument, NULL, 3 },
         {"qpmax", required_argument, NULL, 4 },
         {"avc", no_argument, NULL, 5 },
+        {"sar", no_argument, NULL, 6 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -196,6 +200,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  5:
             encode_param->bSvc = false;
+            break;
+        case  6:
+            encode_param->bSar = true;
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -396,9 +403,7 @@ int main(int argc, char** argv)
     VencSuperFrameConfig     sSuperFrameCfg;
 #endif
     VencH264SVCSkip         SVCSkip; // set SVC and skip_frame
-#ifdef USE_ASPECT_RATIO
     VencH264AspectRatio        sAspectRatio;
-#endif
 #ifdef USE_VIDEO_SIGNAL
     VencH264VideoSignal        sVideoSignal;
 #endif
@@ -431,6 +436,7 @@ int main(int argc, char** argv)
     encode_param.qpmin = 10;
     encode_param.qpmax = 50;
     encode_param.bSvc = true;
+    encode_param.bSar = false;
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
@@ -651,12 +657,12 @@ int main(int argc, char** argv)
         //VideoEncSetParameter(pVideoEnc, VENC_IndexParamROIConfig, &sRoiConfig[3]);
         value = 0;
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamSetPSkip, &value);
-#ifdef USE_ASPECT_RATIO
+    if(encode_param.bSar){
         sAspectRatio.aspect_ratio_idc = 255;
         sAspectRatio.sar_width = 4;
         sAspectRatio.sar_height = 3;
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264AspectRatio, &sAspectRatio);
-#endif
+    }
         //value = 1;
         //VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264FastEnc, &value);
 
