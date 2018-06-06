@@ -207,7 +207,7 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"blockNum", required_argument, NULL, 13 },
         {"fast", no_argument, NULL, 14 },
         {"super", no_argument, NULL, 15 },
-        {"vbv", no_argument, NULL, 16 },
+        {"vbv", required_argument, NULL, 16 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -538,6 +538,8 @@ int main(int argc, char** argv)
         printf(" encoder set to be fast mode \n");
     if(encode_param.enableSuperFrame)
         printf(" encoder set to be super frame rencode mode \n");
+    if(encode_param.vbvSize)
+        printf(" encoder set vbvSize : %d\n", encode_param.vbvSize);
     printf(" codec format : %d \n", encode_param.encode_format);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
