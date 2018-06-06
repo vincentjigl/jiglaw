@@ -59,6 +59,8 @@ typedef struct {
     unsigned int dst_height;
     unsigned int sliceNum;
 
+    bool bIntraRefresh;
+    unsigned int blockNum;
     bool bSvc;
     bool bSar;
     bool bfixQp;
@@ -132,6 +134,10 @@ static const argument_t ArgumentMapping[] =
         "set slice number, sliceHeight=Height/sliceNum" },
     { "--",  "-intraPeriod",  17,
         "set intra period, maxKeyFrame=intraPeriod" },
+    { "--",  "-intraRefresh",  18,
+        "set intra refresh, must set refresh blockNum = xxx" },
+    { "--",  "-blockNum",  19,
+        "set intra refresh number , blockNum=xxx" },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -190,6 +196,8 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"pqp", required_argument, NULL, 9 },
         {"sliceNum", required_argument, NULL, 10 },
         {"intraPeriod", required_argument, NULL, 11 },
+        {"intraRefresh", no_argument, NULL, 12 },
+        {"blockNum", required_argument, NULL, 13 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -237,6 +245,12 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  11:
             encode_param->maxKeyFrame = atoi(optarg);
+            break;
+        case  12:
+            encode_param->bIntraRefresh = true;
+            break;
+        case  13:
+            encode_param->blockNum = atoi(optarg);
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -475,6 +489,8 @@ int main(int argc, char** argv)
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
+    sIntraRefresh.bEnable = false;
+    sIntraRefresh.nBlockNumber = 10;
 
     strcpy((char*)encode_param.intput_file,        "/data/camera/720p-30zhen.yuv");
     strcpy((char*)encode_param.output_file,        "/data/camera/720p.264");
@@ -496,6 +512,8 @@ int main(int argc, char** argv)
         printf(" fix qp enable, IQp=%d, PQp=%d  \n", encode_param.fixIQp,encode_param.fixPQp);
     if(encode_param.sliceNum)
         printf(" slice number : %d \n", encode_param.sliceNum);
+    if(encode_param.bIntraRefresh)
+        printf(" intraRefresh block number : %d \n", encode_param.blockNum);
     printf(" codec format : %d \n", encode_param.encode_format);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
@@ -555,6 +573,7 @@ int main(int argc, char** argv)
     h264Param.sProfileLevel.nLevel = VENC_H264Level51;
     h264Param.sQPRange.nMinqp = encode_param.qpmin;
     h264Param.sQPRange.nMaxqp = encode_param.qpmax;
+
 
 	printf(" init jpeg\n");
     InitJpegExif(&exifinfo);
@@ -691,7 +710,10 @@ int main(int argc, char** argv)
         if(encode_param.bfixQp)
             VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264FixQP, &fixQP);
 
-        //VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264CyclicIntraRefresh, &sIntraRefresh);
+        if(encode_param.bIntraRefresh){
+            sIntraRefresh.nBlockNumber = encode_param.blockNum;
+            VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264CyclicIntraRefresh, &sIntraRefresh);
+        }
 
         if(encode_param.sliceNum){
             value = encode_param.dst_height/encode_param.sliceNum;
