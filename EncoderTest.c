@@ -489,8 +489,6 @@ int main(int argc, char** argv)
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
-    sIntraRefresh.bEnable = false;
-    sIntraRefresh.nBlockNumber = 10;
 
     strcpy((char*)encode_param.intput_file,        "/data/camera/720p-30zhen.yuv");
     strcpy((char*)encode_param.output_file,        "/data/camera/720p.264");
@@ -553,7 +551,7 @@ int main(int argc, char** argv)
     sRoiConfig[3].sRect.nHeight = 180;
 
     //intraRefresh
-    sIntraRefresh.bEnable = 1;
+    sIntraRefresh.bEnable = false;
     sIntraRefresh.nBlockNumber = 10;
 
     //fix qp mode
