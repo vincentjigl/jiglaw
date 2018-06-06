@@ -489,8 +489,8 @@ int main(int argc, char** argv)
     ParseArgument(&encode_param, argc, argv);
     printf(" input file: %s \n", encode_param.intput_file);
     printf(" output file: %s \n", encode_param.output_file);
-    printf(" dst_size=%d, src_size=%d, intraPeriod=%d, bitrate=%d, qpmin=%d, qpmax=%d, framerate=%d\n", encode_param.maxKeyFrame, \
-           encode_param.dst_size, encode_param.src_size,  encode_param.bit_rate, \
+    printf(" dst_size=%d, src_size=%d, intraPeriod=%d, bitrate=%d, qpmin=%d, qpmax=%d, framerate=%d\n",  \
+           encode_param.dst_size, encode_param.src_size, encode_param.maxKeyFrame, encode_param.bit_rate, \
            encode_param.qpmin, encode_param.qpmax, encode_param.frame_rate);
     if(encode_param.bfixQp)
         printf(" fix qp enable, IQp=%d, PQp=%d  \n", encode_param.fixIQp,encode_param.fixPQp);
