@@ -61,6 +61,7 @@ typedef struct {
 
     bool bIntraRefresh;
     unsigned int blockNum;
+    bool bFastEnc;
     bool bSvc;
     bool bSar;
     bool bfixQp;
@@ -138,6 +139,8 @@ static const argument_t ArgumentMapping[] =
         "set intra refresh, must set refresh blockNum = xxx" },
     { "--",  "-blockNum",  19,
         "set intra refresh number , blockNum=xxx" },
+    { "--",  "-fast",  20,
+        "set encoder to fast mode, quality will be down, bitrate will be higher" },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -198,6 +201,7 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"intraPeriod", required_argument, NULL, 11 },
         {"intraRefresh", no_argument, NULL, 12 },
         {"blockNum", required_argument, NULL, 13 },
+        {"fast", no_argument, NULL, 14 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -251,6 +255,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  13:
             encode_param->blockNum = atoi(optarg);
+            break;
+        case  14:
+            encode_param->bFastEnc = true;
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -486,6 +493,9 @@ int main(int argc, char** argv)
     encode_param.qpmax = 50;
     encode_param.bSvc = true;
     encode_param.bSar = false;
+    encode_param.bFastEnc = false;
+    encode_param.bIntraRefresh = false;
+    encode_param.blockNum = 10;
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
@@ -512,6 +522,8 @@ int main(int argc, char** argv)
         printf(" slice number : %d \n", encode_param.sliceNum);
     if(encode_param.bIntraRefresh)
         printf(" intraRefresh block number : %d \n", encode_param.blockNum);
+    if(encode_param.bFastEnc)
+        printf(" encoder set to be fast mode \n");
     printf(" codec format : %d \n", encode_param.encode_format);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
@@ -551,8 +563,8 @@ int main(int argc, char** argv)
     sRoiConfig[3].sRect.nHeight = 180;
 
     //intraRefresh
-    sIntraRefresh.bEnable = false;
-    sIntraRefresh.nBlockNumber = 10;
+    sIntraRefresh.bEnable = encode_param.bIntraRefresh;
+    sIntraRefresh.nBlockNumber = encode_param.blockNum;
 
     //fix qp mode
     fixQP.bEnable = encode_param.bfixQp;
@@ -730,8 +742,10 @@ int main(int argc, char** argv)
         sAspectRatio.sar_height = 3;
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264AspectRatio, &sAspectRatio);
     }
-        //value = 1;
-        //VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264FastEnc, &value);
+    if(encode_param.bFastEnc) {
+        value = 1;
+        VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264FastEnc, &value);
+    }
 
 #ifdef USE_VIDEO_SIGNAL
         sVideoSignal.video_format = 5;
