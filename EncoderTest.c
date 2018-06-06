@@ -50,6 +50,7 @@ typedef struct {
     unsigned int src_size;
     unsigned int dst_size;
     unsigned int output_len;
+    unsigned int vbvSize;
 
     unsigned int src_width;
     unsigned int src_height;
@@ -142,6 +143,8 @@ static const argument_t ArgumentMapping[] =
         "set encoder to fast mode, quality will be down, bitrate will be higher" },
     { "--",  "-super",  21,
         "enable the super frame mode:reencode the huge frame" },
+    { "--",  "-vbvSize",  22,
+        "set vbv size, for example vbvsize 4000000, 2000000 " },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -204,6 +207,7 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"blockNum", required_argument, NULL, 13 },
         {"fast", no_argument, NULL, 14 },
         {"super", no_argument, NULL, 15 },
+        {"vbv", no_argument, NULL, 16 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -263,6 +267,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  15:
             encode_param->enableSuperFrame = true;
+            break;
+        case  16:
+            encode_param->vbvSize = atoi(optarg);
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -488,6 +495,7 @@ int main(int argc, char** argv)
     encode_param.dst_width = 1280;
     encode_param.dst_height = 720;
     encode_param.sliceNum = 0;
+    encode_param.vbvSize = 0;
 
     encode_param.bit_rate = 2*1024*1024;
     encode_param.frame_rate = 30;
@@ -716,6 +724,10 @@ int main(int argc, char** argv)
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264SVCSkip, &SVCSkip);
 	    printf("set parm svc, temporal layer %d \n", SVCSkip.nTemporalSVC = T_LAYER_3);
     }
+        if(encode_param.vbvSize) {
+            value=encode_param.vbvSize;
+            VideoEncSetParameter(pVideoEnc, VENC_IndexParamSetVbvSize, &value);
+        }
 
         value = 0;
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamIfilter, &value);
