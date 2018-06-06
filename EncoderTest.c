@@ -21,8 +21,6 @@
 
 #define DEMO_FILE_NAME_LEN 256
 //#define USE_VIDEO_SIGNAL
-//#define USE_ASPECT_RATIO
-//#define USE_SUPER_FRAME
 
 #define _ENCODER_TIME_
 #ifdef _ENCODER_TIME_
@@ -65,6 +63,7 @@ typedef struct {
     bool bSvc;
     bool bSar;
     bool bfixQp;
+    bool enableSuperFrame;
     int fixIQp;
     int fixPQp;
     int qpmin;
@@ -141,6 +140,8 @@ static const argument_t ArgumentMapping[] =
         "set intra refresh number , blockNum=xxx" },
     { "--",  "-fast",  20,
         "set encoder to fast mode, quality will be down, bitrate will be higher" },
+    { "--",  "-super",  21,
+        "enable the super frame mode:reencode the huge frame" },
 };
 
 int yu12_nv12(unsigned int width, unsigned int height, unsigned char *addr_uv,
@@ -202,6 +203,7 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
         {"intraRefresh", no_argument, NULL, 12 },
         {"blockNum", required_argument, NULL, 13 },
         {"fast", no_argument, NULL, 14 },
+        {"super", no_argument, NULL, 15 },
         {"hh", no_argument, NULL, 69},
         {NULL, no_argument, NULL, 0 }
     };
@@ -258,6 +260,9 @@ void ParseArgument(encode_param_t *encode_param, char argc, char **argv)
             break;
         case  14:
             encode_param->bFastEnc = true;
+            break;
+        case  15:
+            encode_param->enableSuperFrame = true;
             break;
         case  2:
             memset(encode_param->reference_file, 0, sizeof(encode_param->reference_file));
@@ -454,9 +459,7 @@ int main(int argc, char** argv)
     EXIFInfo exifinfo;
     VencCyclicIntraRefresh sIntraRefresh;
     unsigned char *uv_tmp_buffer = NULL;
-#ifdef USE_SUPER_FRAME
     VencSuperFrameConfig     sSuperFrameCfg;
-#endif
     VencH264SVCSkip         SVCSkip; // set SVC and skip_frame
     VencH264AspectRatio        sAspectRatio;
 #ifdef USE_VIDEO_SIGNAL
@@ -496,6 +499,7 @@ int main(int argc, char** argv)
     encode_param.bFastEnc = false;
     encode_param.bIntraRefresh = false;
     encode_param.blockNum = 10;
+    encode_param.enableSuperFrame=false;
 
     encode_param.encode_format = VENC_CODEC_H264;
     encode_param.encode_frame_num = 200;
@@ -524,6 +528,8 @@ int main(int argc, char** argv)
         printf(" intraRefresh block number : %d \n", encode_param.blockNum);
     if(encode_param.bFastEnc)
         printf(" encoder set to be fast mode \n");
+    if(encode_param.enableSuperFrame)
+        printf(" encoder set to be super frame rencode mode \n");
     printf(" codec format : %d \n", encode_param.encode_format);
     printf(" get reference file: %s \n", encode_param.reference_file);
 
@@ -754,13 +760,13 @@ int main(int argc, char** argv)
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamH264VideoSignal, &sVideoSignal);
 #endif
 
-#ifdef USE_SUPER_FRAME
-        //sSuperFrameCfg.eSuperFrameMode = VENC_SUPERFRAME_REENCODE;
-        sSuperFrameCfg.eSuperFrameMode = VENC_SUPERFRAME_NONE;
+    if(encode_param.enableSuperFrame){
+        sSuperFrameCfg.eSuperFrameMode = VENC_SUPERFRAME_REENCODE;
+        //sSuperFrameCfg.eSuperFrameMode = VENC_SUPERFRAME_NONE;
         sSuperFrameCfg.nMaxIFrameBits = 30000*8;
         sSuperFrameCfg.nMaxPFrameBits = 15000*8;
         VideoEncSetParameter(pVideoEnc, VENC_IndexParamSuperFrameConfig, &sSuperFrameCfg);
-#endif
+    }
     }
 
     VideoEncInit(pVideoEnc, &baseConfig);
